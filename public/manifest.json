@@ -1,0 +1,41 @@
+{
+  "name": "QuickSell",
+  "short_name": "QuickSell",
+  "description": "Online POS app for managing products and sales, with automatic Google Sheets integration.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f8ff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/icons/128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "th",
+  "screenshots": [
+    {
+      "src": "/screenshots/1.png",
+      "sizes": "540x960",
+      "type": "image/png"
+    }
+  ]
+}
