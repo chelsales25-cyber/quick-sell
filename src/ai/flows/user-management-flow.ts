@@ -1,4 +1,4 @@
-"use server";
+'use server';
 /**
  * @fileOverview Flows for managing Firebase Authentication users.
  * This requires the Firebase Admin SDK.
@@ -9,34 +9,16 @@
  * - setUserRole - Sets a custom claim for a user's role (admin/user).
  */
 
-import { ai } from "@/ai/genkit";
-import { z } from "genkit";
-// import * as admin from "firebase-admin";
-import { UserRecord } from "firebase-admin/auth";
-import { FirebaseError } from "firebase/app";
-import { adminAuth } from "@/lib/firebase-admin";
-
-// --- Initialize Firebase Admin SDK ---
-// This should only run once.
-// if (!admin.apps.length) {
-//   try {
-//     admin.initializeApp({
-//       credential: admin.credential.cert({
-//         projectId: process.env.FIREBASE_PROJECT_ID,
-//         clientEmail: process.env.GOOGLE_CLIENT_EMAIL,
-//         // The private key must be properly formatted.
-//         privateKey: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-//       }),
-//     });
-//   } catch (error) {
-//     console.error("Firebase admin initialization error:", error);
-//   }
-// }
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
+import { UserRecord } from 'firebase-admin/auth';
+import { FirebaseError } from 'firebase/app';
+import { adminAuth } from '@/lib/firebase-admin';
 
 // --- Zod Schemas for Input and Output ---
 const CreateUserInputSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
 const UpdateUserInputSchema = z.object({
@@ -44,13 +26,13 @@ const UpdateUserInputSchema = z.object({
   disabled: z.boolean().optional(),
   password: z
     .string()
-    .min(6, "Password must be at least 6 characters")
+    .min(6, 'Password must be at least 6 characters')
     .optional(),
 });
 
 const SetUserRoleInputSchema = z.object({
   uid: z.string(),
-  role: z.enum(["admin", "user"]),
+  role: z.enum(['admin', 'user']),
 });
 
 const ManagedUserSchema = z.object({
@@ -72,7 +54,7 @@ function mapUserRecordToManagedUser(user: UserRecord): ManagedUser {
     disabled: user.disabled,
     creationTime: user.metadata.creationTime,
     lastSignInTime: user.metadata?.lastSignInTime,
-    role: (user.customClaims?.role as string) || "user",
+    role: (user.customClaims?.role as string) || 'user',
   };
 }
 
@@ -81,8 +63,8 @@ function handleFirebaseError(error: unknown): never {
     console.error(`Firebase Admin SDK Error: ${error.code}`, error.message);
     throw new Error(error.message);
   }
-  console.error("An unexpected error occurred:", error);
-  throw new Error("An unexpected error occurred in user management.");
+  console.error('An unexpected error occurred:', error);
+  throw new Error('An unexpected error occurred in user management.');
 }
 
 // --- Public Wrapper Functions ---
@@ -112,20 +94,20 @@ export async function setUserRole(
 
 const listUsersFlow = ai.defineFlow(
   {
-    name: "listUsersFlow",
+    name: 'listUsersFlow',
     outputSchema: z.array(ManagedUserSchema),
   },
   async () => {
     try {
       if (!adminAuth) {
-        throw new Error("Firebase Admin not initialized");
+        throw new Error('Firebase Admin not initialized');
       }
       const listUsersResult = await adminAuth.listUsers();
 
       const users = listUsersResult.users.map(mapUserRecordToManagedUser);
       return users;
     } catch (error) {
-      console.error("Error listing users:", error);
+      console.error('Error listing users:', error);
       handleFirebaseError(error);
     }
   }
@@ -133,18 +115,18 @@ const listUsersFlow = ai.defineFlow(
 
 const createUserFlow = ai.defineFlow(
   {
-    name: "createUserFlow",
+    name: 'createUserFlow',
     inputSchema: CreateUserInputSchema,
     outputSchema: ManagedUserSchema,
   },
   async ({ email, password }) => {
     try {
       if (!adminAuth) {
-        throw new Error("Firebase Admin not initialized");
+        throw new Error('Firebase Admin not initialized');
       }
       const userRecord = await adminAuth.createUser({ email, password });
       // Set default role to 'user'
-      await adminAuth.setCustomUserClaims(userRecord.uid, { role: "user" });
+      await adminAuth.setCustomUserClaims(userRecord.uid, { role: 'user' });
       const createdUser = await adminAuth.getUser(userRecord.uid);
       return mapUserRecordToManagedUser(createdUser);
     } catch (error) {
@@ -155,14 +137,14 @@ const createUserFlow = ai.defineFlow(
 
 const updateUserFlow = ai.defineFlow(
   {
-    name: "updateUserFlow",
+    name: 'updateUserFlow',
     inputSchema: UpdateUserInputSchema,
     outputSchema: z.object({ uid: z.string(), success: z.boolean() }),
   },
   async ({ uid, ...updateData }) => {
     try {
       if (!adminAuth) {
-        throw new Error("Firebase Admin not initialized");
+        throw new Error('Firebase Admin not initialized');
       }
       await adminAuth.updateUser(uid, updateData);
       return { uid, success: true };
@@ -174,14 +156,14 @@ const updateUserFlow = ai.defineFlow(
 
 const setUserRoleFlow = ai.defineFlow(
   {
-    name: "setUserRoleFlow",
+    name: 'setUserRoleFlow',
     inputSchema: SetUserRoleInputSchema,
     outputSchema: z.object({ uid: z.string(), role: z.string() }),
   },
   async ({ uid, role }) => {
     try {
       if (!adminAuth) {
-        throw new Error("Firebase Admin not initialized");
+        throw new Error('Firebase Admin not initialized');
       }
       await adminAuth.setCustomUserClaims(uid, { role });
       return { uid, role };
