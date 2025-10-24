@@ -11,6 +11,7 @@ import { google } from 'googleapis';
 import type { ReportItem } from '@/lib/types';
 import { SheetNames, type SheetName } from '@/lib/types';
 import { iconMap } from '@/components/icons';
+import { getGoogleAuth } from '@/lib/google-auth';
 
 // Define input schema for the flow
 const GetSheetDataInputSchema = z.object({
@@ -19,7 +20,7 @@ const GetSheetDataInputSchema = z.object({
 });
 
 export async function getReportsData(
-  spreadsheetId: string,
+  spreadsheetId: string
 ): Promise<ReportItem[]> {
   return getReportsDataFlow({ spreadsheetId, range: SheetNames.REPORT });
 }
@@ -31,14 +32,7 @@ const getReportsDataFlow = ai.defineFlow(
   },
   async ({ spreadsheetId, range }) => {
     try {
-      const auth = new google.auth.GoogleAuth({
-        credentials: {
-          client_email: process.env.GOOGLE_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        },
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-      });
-
+      const auth = getGoogleAuth();
       const sheets = google.sheets({ version: 'v4', auth });
 
       const response = await sheets.spreadsheets.values.get({
@@ -55,26 +49,29 @@ const getReportsDataFlow = ai.defineFlow(
 
       // Map data based on column position
       const mapping = {
-        title: 0,       // Column A
-        value: 1,       // Column B
+        title: 0, // Column A
+        value: 1, // Column B
         description: 2, // Column C
-        icon: 3,        // Column D
+        icon: 3, // Column D
       };
-      
+
       const validIconNames = Object.keys(iconMap);
 
       // Skip header row
       const dataRows = rows.slice(1);
 
-      const reports: ReportItem[] = dataRows.map((row) => {
-        const iconName = row[mapping.icon] || 'DollarSign'; // Default icon
-        return ({
+      const reports: ReportItem[] = dataRows
+        .map((row) => {
+          const iconName = row[mapping.icon] || 'DollarSign'; // Default icon
+          return {
             title: row[mapping.title],
             value: row[mapping.value],
             description: row[mapping.description],
             // Ensure the icon name from the sheet is a valid one we can render
             icon: validIconNames.includes(iconName) ? iconName : 'DollarSign',
-      })}).filter(r => r.title && r.value); // Filter out empty rows
+          };
+        })
+        .filter((r) => r.title && r.value); // Filter out empty rows
 
       return reports;
     } catch (err) {

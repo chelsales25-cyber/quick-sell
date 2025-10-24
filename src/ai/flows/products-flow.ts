@@ -10,6 +10,7 @@ import { z } from 'genkit';
 import { google } from 'googleapis';
 import type { Product } from '@/lib/types';
 import { SheetNames } from '@/lib/types';
+import { getGoogleAuth } from '@/lib/google-auth';
 
 // Define input schema for the flow
 const GetProductDataInputSchema = z.object({
@@ -32,14 +33,7 @@ const getProductDataFlow = ai.defineFlow(
   },
   async ({ spreadsheetId, range }) => {
     try {
-      const auth = new google.auth.GoogleAuth({
-        credentials: {
-          client_email: process.env.GOOGLE_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        },
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-      });
-
+      const auth = getGoogleAuth();
       const sheets = google.sheets({ version: 'v4', auth });
 
       const response = await sheets.spreadsheets.values.get({

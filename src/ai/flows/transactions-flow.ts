@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Flow for interacting with Google Sheets to get transaction data.
@@ -11,9 +10,14 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { google } from 'googleapis';
-import type { Transaction, TransactionDetail, TransactionDetailItem } from '@/lib/types';
+import type {
+  Transaction,
+  TransactionDetail,
+  TransactionDetailItem,
+} from '@/lib/types';
 import { SheetNames } from '@/lib/types';
 import { parse, isValid, formatISO } from 'date-fns';
+import { getGoogleAuth } from '@/lib/google-auth';
 
 // Define input schema for the flow
 const GetTransactionsInputSchema = z.object({
@@ -113,24 +117,22 @@ const mapping = {
   parentCode: 25, // Z: Parent item code for sub-items
 };
 
-
 /**
  * Parses a dd/MM/yy date string from Google Sheets into a standard ISO string.
  * @param dateString The date string from the sheet.
  * @returns An ISO formatted date string (e.g., "2023-12-25T00:00:00.000Z") or the original string if parsing fails.
  */
 const parseSheetDateToISO = (dateString: string): string => {
-    if (!dateString) return '';
-    // The format from the sheet is 'dd/MM/yy'
-    const parsedDate = parse(dateString, 'dd/MM/yy', new Date());
-    if (isValid(parsedDate)) {
-        return formatISO(parsedDate);
-    }
-    // If parsing fails, return the original string to avoid data loss,
-    // though it might cause issues downstream.
-    return dateString;
+  if (!dateString) return '';
+  // The format from the sheet is 'dd/MM/yy'
+  const parsedDate = parse(dateString, 'dd/MM/yy', new Date());
+  if (isValid(parsedDate)) {
+    return formatISO(parsedDate);
+  }
+  // If parsing fails, return the original string to avoid data loss,
+  // though it might cause issues downstream.
+  return dateString;
 };
-
 
 const getTransactionDetailsFlow = ai.defineFlow(
   {
@@ -139,14 +141,7 @@ const getTransactionDetailsFlow = ai.defineFlow(
   },
   async ({ spreadsheetId, orderNo }) => {
     try {
-      const auth = new google.auth.GoogleAuth({
-        credentials: {
-          client_email: process.env.GOOGLE_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        },
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-      });
-
+      const auth = getGoogleAuth();
       const sheets = google.sheets({ version: 'v4', auth });
       const range = SheetNames.TRANSACTIONS;
 
@@ -168,12 +163,12 @@ const getTransactionDetailsFlow = ai.defineFlow(
       if (dataRows.length === 0) {
         return null;
       }
-      
+
       // Group sub-items under their parents
       const itemsMap = new Map<string, TransactionDetailItem>();
       const subItems: TransactionDetailItem[] = [];
 
-      dataRows.forEach(row => {
+      dataRows.forEach((row) => {
         const item: TransactionDetailItem = {
           id: row[mapping.productId] || '',
           name: row[mapping.productName] || '',
@@ -185,34 +180,33 @@ const getTransactionDetailsFlow = ai.defineFlow(
         };
 
         if (item.parentCode) {
-            subItems.push(item);
+          subItems.push(item);
         } else {
-            itemsMap.set(item.id, item);
+          itemsMap.set(item.id, item);
         }
       });
 
-      subItems.forEach(subItem => {
-        if(subItem.parentCode) {
-            const parent = itemsMap.get(subItem.parentCode);
-            if (parent) {
-                parent.subItems = parent.subItems || [];
-                parent.subItems.push(subItem);
-            }
+      subItems.forEach((subItem) => {
+        if (subItem.parentCode) {
+          const parent = itemsMap.get(subItem.parentCode);
+          if (parent) {
+            parent.subItems = parent.subItems || [];
+            parent.subItems.push(subItem);
+          }
         }
       });
 
       const items = Array.from(itemsMap.values());
 
-
       const total = items.reduce((acc, item) => {
         const itemTotal = item.price * item.quantity - item.discount;
         const subItemsTotal = (item.subItems || []).reduce(
-          (subAcc, subItem) => subAcc + (subItem.price * subItem.quantity - subItem.discount),
+          (subAcc, subItem) =>
+            subAcc + (subItem.price * subItem.quantity - subItem.discount),
           0
         );
         return acc + itemTotal + subItemsTotal;
       }, 0);
-
 
       const firstRow = dataRows[0];
 
@@ -250,14 +244,7 @@ const getTransactionsDataFlow = ai.defineFlow(
   },
   async ({ spreadsheetId, sellerId }) => {
     try {
-      const auth = new google.auth.GoogleAuth({
-        credentials: {
-          client_email: process.env.GOOGLE_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        },
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-      });
-
+      const auth = getGoogleAuth();
       const sheets = google.sheets({ version: 'v4', auth });
       const range = SheetNames.TRANSACTIONS; // Points to 'ARTRN!A:Z'
 
@@ -290,7 +277,7 @@ const getTransactionsDataFlow = ai.defineFlow(
 
       const rawTransactions: RawTransactionRow[] = dataRows
         .map((row) => ({
-          parentCode: row[mapping.parentCode] || '', 
+          parentCode: row[mapping.parentCode] || '',
           date: parseSheetDateToISO(row[mapping.date] || ''),
           customerId: row[mapping.customerId] || '',
           customerName: row[mapping.customerName] || 'ลูกค้าทั่วไป',
@@ -340,8 +327,8 @@ const getTransactionsDataFlow = ai.defineFlow(
       ).map(({ items, ...rest }) => rest);
 
       // Sort by Order No descending
-      const sortedTransactions = summarizedTransactions.sort(
-        (a, b) => b.id.localeCompare(a.id, undefined, { numeric: true })
+      const sortedTransactions = summarizedTransactions.sort((a, b) =>
+        b.id.localeCompare(a.id, undefined, { numeric: true })
       );
 
       return sortedTransactions;
@@ -362,21 +349,14 @@ const updateTransactionStatusFlow = ai.defineFlow(
   },
   async ({ spreadsheetId, orderNo, status, note }) => {
     try {
-      const auth = new google.auth.GoogleAuth({
-        credentials: {
-          client_email: process.env.GOOGLE_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        },
-        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-      });
-
+      const auth = getGoogleAuth();
       const sheets = google.sheets({ version: 'v4', auth });
       const sheetName = 'ARTRN';
 
       // 1. Get all data to find row indices
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: `${sheetName}!A:Z`, 
+        range: `${sheetName}!A:Z`,
       });
 
       const rows = response.data.values;

@@ -30,12 +30,5 @@
   ],
   "orientation": "portrait",
   "scope": "/",
-  "lang": "th",
-  "screenshots": [
-    {
-      "src": "/screenshots/1.png",
-      "sizes": "540x960",
-      "type": "image/png"
-    }
-  ]
+  "lang": "th"
 }

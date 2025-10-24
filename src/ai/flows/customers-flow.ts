@@ -1,4 +1,4 @@
-"use server";
+'use server';
 /**
  * @fileOverview Flow for interacting with Google Sheets to get and add customer data.
  *
@@ -6,15 +6,16 @@
  * - addCustomer - A function to add a new customer to the 'AR' sheet.
  */
 
-import { ai } from "@/ai/genkit";
-import { z } from "genkit";
-import { google } from "googleapis";
-import type { Customer } from "@/lib/types";
-import { SheetNames } from "@/lib/types";
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
+import { google } from 'googleapis';
+import type { Customer } from '@/lib/types';
+import { SheetNames } from '@/lib/types';
+import { getGoogleAuth } from '@/lib/google-auth';
 
 const GetSheetDataInputSchema = z.object({
-  spreadsheetId: z.string().describe("The ID of the Google Sheet."),
-  range: z.string().describe("The A1 notation of the range to retrieve."),
+  spreadsheetId: z.string().describe('The ID of the Google Sheet.'),
+  range: z.string().describe('The A1 notation of the range to retrieve.'),
 });
 
 // Remove 'id' from the input schema as it will be auto-generated.
@@ -39,20 +40,13 @@ export async function addCustomer(
 
 const getCustomersDataFlow = ai.defineFlow(
   {
-    name: "getCustomersDataFlow",
+    name: 'getCustomersDataFlow',
     inputSchema: GetSheetDataInputSchema,
   },
   async ({ spreadsheetId, range }) => {
     try {
-      const auth = new google.auth.GoogleAuth({
-        credentials: {
-          client_email: process.env.GOOGLE_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-        },
-        scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
-      });
-
-      const sheets = google.sheets({ version: "v4", auth });
+      const auth = getGoogleAuth();
+      const sheets = google.sheets({ version: 'v4', auth });
 
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId,
@@ -62,7 +56,7 @@ const getCustomersDataFlow = ai.defineFlow(
       const rows = response.data.values;
 
       if (!rows || rows.length === 0) {
-        console.log("No customer data found.");
+        console.log('No customer data found.');
         return [];
       }
 
@@ -81,22 +75,22 @@ const getCustomersDataFlow = ai.defineFlow(
         .map((row) => ({
           id: row[mapping.id],
           name: row[mapping.name],
-          phone: row[mapping.phone] || "",
-          address: row[mapping.address] || "",
+          phone: row[mapping.phone] || '',
+          address: row[mapping.address] || '',
         }))
         .filter((c) => c.id && c.name); // Filter out incomplete rows
 
       return customers;
     } catch (err) {
-      console.error("The API returned an error: " + err);
-      throw new Error("Failed to retrieve customer data from Google Sheets.");
+      console.error('The API returned an error: ' + err);
+      throw new Error('Failed to retrieve customer data from Google Sheets.');
     }
   }
 );
 
 const addCustomerFlow = ai.defineFlow(
   {
-    name: "addCustomerFlow",
+    name: 'addCustomerFlow',
     inputSchema: AddCustomerInputSchema,
     outputSchema: z.object({
       success: z.boolean(),
@@ -105,23 +99,15 @@ const addCustomerFlow = ai.defineFlow(
   },
   async (customerData) => {
     try {
-      const auth = new google.auth.GoogleAuth({
-        credentials: {
-          client_email: process.env.GOOGLE_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-        },
-        // IMPORTANT: We need read and write scope for this flow
-        scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-      });
-
-      const sheets = google.sheets({ version: "v4", auth });
+      const auth = getGoogleAuth();
+      const sheets = google.sheets({ version: 'v4', auth });
       const spreadsheetId = process.env.NEXT_PUBLIC_SHEET_ID!;
       const range = SheetNames.CUSTOMERS; // e.g., 'AR!A:D'
 
       // 1. Get all customer data to determine the next ID
       const getResponse = await sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: "AR!A:A", // Only need the ID column
+        range: 'AR!A:A', // Only need the ID column
       });
 
       const rows = getResponse.data.values;
@@ -139,7 +125,7 @@ const addCustomerFlow = ai.defineFlow(
       }
 
       const newIdNumber = lastIdNumber + 1;
-      const newCustomerId = `CS${String(newIdNumber).padStart(4, "0")}`;
+      const newCustomerId = `CS${String(newIdNumber).padStart(4, '0')}`;
 
       // 2. Prepare the new row with the generated ID
       const values = [
@@ -155,7 +141,7 @@ const addCustomerFlow = ai.defineFlow(
       await sheets.spreadsheets.values.append({
         spreadsheetId,
         range,
-        valueInputOption: "USER_ENTERED",
+        valueInputOption: 'USER_ENTERED',
         requestBody: {
           values,
         },
@@ -163,8 +149,8 @@ const addCustomerFlow = ai.defineFlow(
 
       return { success: true, newCustomerId: newCustomerId };
     } catch (err) {
-      console.error("The API returned an error while adding customer: " + err);
-      throw new Error("Failed to save customer data to Google Sheets.");
+      console.error('The API returned an error while adding customer: ' + err);
+      throw new Error('Failed to save customer data to Google Sheets.');
     }
   }
 );
