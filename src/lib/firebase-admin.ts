@@ -1,32 +1,44 @@
-import admin from "firebase-admin";
+import admin from 'firebase-admin';
 
-// IMPORTANT: Replace with your service account credentials
-// You can generate this file in the Firebase console:
-// Project settings > Service accounts > Generate new private key
-// Ensure the file is named 'serviceAccountKey.json' and is in the root of your project.
-try {
-  const serviceAccount = require("../config/serviceAccountKey.json");
+const serviceAccountB64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_JSON;
 
-  if (!admin.apps.length) {
+if (!admin.apps.length && serviceAccountB64) {
+  try {
+    const serviceAccount = JSON.parse(
+      Buffer.from(serviceAccountB64, 'base64').toString('utf-8')
+    );
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      //   storageBucket: "studio-7884642390-af176.appspot.com",
     });
+  } catch (error) {
+    console.error('Firebase Admin initialization error: ', error);
+    if (error instanceof SyntaxError) {
+      console.error(
+        '\n*** Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY_JSON. Make sure it is a valid base64 encoded JSON. ***\n'
+      );
+    }
   }
-} catch (error) {
-  console.error("Firebase Admin initialization error: ", error);
-  if ((error as any).code === "MODULE_NOT_FOUND") {
+} else if (!serviceAccountB64) {
+  if (process.env.NODE_ENV !== 'production') {
     console.error(
-      "\n*** Firebase Admin SDK Service Account key not found. ***"
+      '\n*** FIREBASE_SERVICE_ACCOUNT_KEY_JSON environment variable is not set. ***'
     );
     console.error(
-      "Please download your service account key from the Firebase console and place it as 'serviceAccountKey.json' in the root of your project."
+      'For local development, create a .env.local file and add the base64 encoded content of your service account key file.'
     );
     console.error(
-      "The gallery page will not be able to load images from Storage without it.\n"
+      'Example .env.local:\nFIREBASE_SERVICE_ACCOUNT_KEY_JSON=PASTE_YOUR_BASE64_STRING_HERE\n'
+    );
+    console.error(
+      'You can convert your JSON file to base64 using an online tool or a command-line utility.'
+    );
+  } else {
+    console.error(
+      'Firebase Admin initialization failed: Service account credentials not found in environment variables.'
     );
   }
 }
+
 const adminAuth = admin.apps.length ? admin.auth() : undefined;
 const adminDb = admin.apps.length ? admin.firestore() : undefined;
 

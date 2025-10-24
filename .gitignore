@@ -40,6 +40,12 @@ next-env.d.ts
 .genkit/*
 .env
 
+# Local Environment Variables
+.env.local
+.env.*.local
+
 # firebase
 firebase-debug.log
 firestore-debug.log
+/src/config/serviceAccountKey.json
+serviceAccountKey.json
