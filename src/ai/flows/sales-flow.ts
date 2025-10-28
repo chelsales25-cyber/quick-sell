@@ -30,15 +30,12 @@ const saveSaleTransactionFlow = ai.defineFlow(
       const spreadsheetId = process.env.NEXT_PUBLIC_SHEET_ID!;
       const range = SheetNames.TRANSACTIONS;
 
-      // const transactionDate = dayjs(saleData.transactionDate).format(
-      //   "DD/MM/YY"
-      // );
       const orderNo = `SALE-${String(Date.now()).slice(-10)}`; // Generate unique 10-digit order number
 
       const rows = saleData.items.map((item) => [
         '', // A: invoice no
         orderNo, // B: อ้างอิง
-        saleData.transactionDate, // C: วันที่
+        `'${saleData.transactionDate}`, // C: วันที่
         saleData.customer.id || '', // D: รหัสลูกค้าCode Customer
         saleData.seller, // E: รหัสพนักงาน (seller id)
         saleData.warehouse, // F: รหัสคลังสินค้า
