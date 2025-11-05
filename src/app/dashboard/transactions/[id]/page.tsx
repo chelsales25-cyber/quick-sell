@@ -263,6 +263,13 @@ export default function TransactionDetailPage() {
     );
   }
 
+  const totalQuantity = transaction.items.reduce((total, item) => {
+    const subItemsQuantity = (item.subItems || []).reduce(
+      (subTotal, subItem) => subTotal + subItem.quantity,
+      0
+    );
+    return total + item.quantity + subItemsQuantity;
+  }, 0);
   const isCancelled = transaction.status === 'ยกเลิก';
 
   return (
@@ -374,8 +381,13 @@ export default function TransactionDetailPage() {
             </TableBody>
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={2} className='text-right font-bold text-lg'>
-                  ยอดรวมสุทธิ
+                <TableCell>
+                  <div className='text-base font-bold'>
+                    รวม {totalQuantity} ชิ้น
+                  </div>
+                </TableCell>
+                <TableCell colSpan={1} className='text-right font-bold'>
+                  <div className='text-lg'>ยอดรวมสุทธิ</div>
                 </TableCell>
                 <TableCell className='text-right font-bold text-lg'>
                   {formatBaht(transaction.total)}
