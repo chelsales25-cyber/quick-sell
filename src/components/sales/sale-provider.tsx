@@ -278,6 +278,22 @@ export function SaleProvider({ children }: { children: React.ReactNode }) {
   };
 
   const openPaymentSheet = () => {
+    // validate each promotion in items is it null or not and show error when any is null
+    const hasInvalidPromoCode = saleItems.some(
+      (item) =>
+        item.promoCode === null ||
+        item.promoCode === undefined ||
+        item.promoCode === ''
+    );
+    if (hasInvalidPromoCode) {
+      toast({
+        variant: 'destructive',
+        title: 'ข้อมูลโปรโมชันไม่ถูกต้อง',
+        description: 'โปรดตรวจสอบว่าสินค้าทุกชิ้นมีโปรโมชันที่ถูกต้อง',
+      });
+      return;
+    }
+
     if (saleItems.length === 0) {
       toast({
         variant: 'destructive',

@@ -315,23 +315,18 @@ const SaleItemCard = ({
             โปรโมชัน
           </Label>
           <Select
-            value={item.promoCode || 'no-promo'}
+            value={item.promoCode || undefined}
             onValueChange={(value) =>
-              handlePromoCodeChange(
-                item.id,
-                value === 'no-promo' ? '' : value,
-                item.parentCode
-              )
+              handlePromoCodeChange(item.id, value, item.parentCode)
             }
             disabled={isLoadingPromotions}
           >
             <SelectTrigger id={`promo-${item.id}`} className='h-8 text-sm'>
               <SelectValue
-                placeholder={isLoadingPromotions ? 'โหลด...' : 'เลือกโปรโมชัน'}
+                placeholder={isLoadingPromotions ? 'โหลด...' : 'กรุณาเลือก'}
               />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='no-promo'>- ไม่มี -</SelectItem>
               {promotions?.map((p) => (
                 <SelectItem key={p.code} value={p.code}>
                   [{p.code}] - {p.name}
@@ -635,6 +630,14 @@ export function CurrentSaleCard() {
       locale: th,
     })}`;
   };
+
+  const totalQuantity = saleItems.reduce((total, item) => {
+    const subItemsQuantity = (item.subItems || []).reduce(
+      (subTotal, subItem) => subTotal + subItem.quantity,
+      0
+    );
+    return total + item.quantity + subItemsQuantity;
+  }, 0);
 
   return (
     <Card className='flex h-full flex-col'>
@@ -1054,7 +1057,14 @@ export function CurrentSaleCard() {
         </div>
       </CardContent>
       <CardFooter className='flex flex-wrap items-center justify-between gap-2'>
-        <div className='text-xl font-bold'>รวม: {formatBaht(total)}</div>
+        <div>
+          <div className='text-xl font-bold'>รวม: {formatBaht(total)}</div>
+          {totalQuantity > 0 && (
+            <div className='text-sm text-muted-foreground'>
+              รวม {totalQuantity} ชิ้น
+            </div>
+          )}
+        </div>
         <Button
           onClick={openPaymentSheet}
           disabled={isSaving || saleItems.length === 0}
