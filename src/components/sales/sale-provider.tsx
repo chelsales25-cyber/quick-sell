@@ -187,11 +187,12 @@ export function SaleProvider({ children }: { children: React.ReactNode }) {
     quantity: number,
     parentCode?: string
   ) => {
-    setSaleItems((prev) =>
-      modifyItem(prev, id, parentCode, (item) =>
-        quantity >= 1 ? { ...item, quantity } : item
-      )
-    );
+    setSaleItems((prev) => {
+      const newQuantity = isNaN(quantity) ? 0 : quantity;
+      return modifyItem(prev, id, parentCode, (item) => {
+        return newQuantity >= 0 ? { ...item, quantity: newQuantity } : item;
+      });
+    });
   };
 
   const handlePriceChange = (
@@ -199,11 +200,12 @@ export function SaleProvider({ children }: { children: React.ReactNode }) {
     price: number,
     parentCode?: string
   ) => {
-    setSaleItems((prev) =>
-      modifyItem(prev, id, parentCode, (item) =>
-        price >= 0 ? { ...item, price } : item
-      )
-    );
+    setSaleItems((prev) => {
+      const newPrice = isNaN(price) ? 0 : price;
+      return modifyItem(prev, id, parentCode, (item) =>
+        newPrice >= 0 ? { ...item, price: newPrice } : item
+      );
+    });
   };
 
   const handleDiscountChange = (

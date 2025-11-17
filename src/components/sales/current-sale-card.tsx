@@ -252,7 +252,7 @@ const SaleItemCard = ({
           <Input
             id={`quantity-${item.id}`}
             type='number'
-            value={item.quantity}
+            value={item.quantity === 0 ? '' : item.quantity}
             onFocus={handleFocus}
             onChange={(e) =>
               handleQuantityChange(
@@ -261,8 +261,14 @@ const SaleItemCard = ({
                 item.parentCode
               )
             }
+            onBlur={(e) => {
+              const value = parseInt(e.target.value, 10);
+              if (isNaN(value) || value < 1) {
+                handleQuantityChange(item.id, 1, item.parentCode);
+              }
+            }}
             className='h-8 text-sm'
-            min='1'
+            min='0'
           />
         </div>
         <div className='space-y-1'>
@@ -272,7 +278,7 @@ const SaleItemCard = ({
           <Input
             id={`price-${item.id}`}
             type='number'
-            value={item.price}
+            value={item.price === 0 ? '' : item.price}
             onFocus={handleFocus}
             onChange={(e) =>
               handlePriceChange(
@@ -281,6 +287,12 @@ const SaleItemCard = ({
                 item.parentCode
               )
             }
+            onBlur={(e) => {
+              const value = parseFloat(e.target.value);
+              if (isNaN(value) || value < 0) {
+                handlePriceChange(item.id, 0, item.parentCode);
+              }
+            }}
             className='h-8 text-sm'
             min='0'
             step='0.01'
